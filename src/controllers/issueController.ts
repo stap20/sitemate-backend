@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import Logger from "../utils/logger"; // Adjust path as necessary
 
 interface Issue {
   id: number;
@@ -13,31 +14,79 @@ class IssueController {
   ];
 
   public createIssue(req: Request, res: Response): void {
-    const newIssue: Issue = req.body;
-    this.issues.push({ ...newIssue, id: this.issues.length + 1 });
-    console.log("Issue Created:", newIssue);
-    res.status(201).json(newIssue);
+    try {
+      const newIssue: Issue = req.body;
+
+      if (!newIssue.title || !newIssue.description) {
+        throw new Error("Title and description are required.");
+      }
+
+      const issueWithId = { ...newIssue, id: this.issues.length + 1 };
+      this.issues.push(issueWithId);
+
+      Logger.info(`Issue Created: ${JSON.stringify(issueWithId)}`);
+      res.status(201).json(issueWithId);
+    } catch (error: any) {
+      Logger.error(`Error Creating Issue: ${error.message}`);
+      res.status(400).json({ error: error.message });
+    }
   }
 
   public getAllIssues(req: Request, res: Response): void {
-    res.send(this.issues);
+    try {
+      Logger.info("Fetching all issues");
+      res.json(this.issues);
+    } catch (error: any) {
+      Logger.error(`Error Fetching Issues: ${error.message}`);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
   }
 
   public updateIssue(req: Request, res: Response): void {
-    const { id } = req.params;
-    const updatedIssue: Issue = req.body;
-    this.issues = this.issues.map((issue) =>
-      issue.id === parseInt(id) ? updatedIssue : issue
-    );
-    console.log("Issue Updated:", updatedIssue);
-    res.send(updatedIssue);
+    try {
+      const { id } = req.params;
+      const updatedIssue: Issue = req.body;
+
+      if (!updatedIssue.title || !updatedIssue.description) {
+        throw new Error("Title and description are required.");
+      }
+
+      const issueId = parseInt(id);
+      const issueIndex = this.issues.findIndex((issue) => issue.id === issueId);
+
+      if (issueIndex === -1) {
+        throw new Error("Issue not found.");
+      }
+
+      this.issues[issueIndex] = updatedIssue;
+
+      Logger.info(`Issue Updated: ${JSON.stringify(updatedIssue)}`);
+      res.json(updatedIssue);
+    } catch (error: any) {
+      Logger.error(`Error Updating Issue: ${error.message}`);
+      res.status(400).json({ error: error.message });
+    }
   }
 
   public deleteIssue(req: Request, res: Response): void {
-    const { id } = req.params;
-    this.issues = this.issues.filter((issue) => issue.id !== parseInt(id));
-    console.log("Issue Deleted with ID:", id);
-    res.send({ message: `Issue with ID ${id} deleted` });
+    try {
+      const { id } = req.params;
+      const issueId = parseInt(id);
+
+      const issueIndex = this.issues.findIndex((issue) => issue.id === issueId);
+
+      if (issueIndex === -1) {
+        throw new Error("Issue not found.");
+      }
+
+      this.issues.splice(issueIndex, 1);
+
+      Logger.info(`Issue Deleted with ID: ${issueId}`);
+      res.json({ message: `Issue with ID ${issueId} deleted` });
+    } catch (error: any) {
+      Logger.error(`Error Deleting Issue: ${error.message}`);
+      res.status(400).json({ error: error.message });
+    }
   }
 }
 
